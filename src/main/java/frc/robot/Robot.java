@@ -13,6 +13,8 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import org.littletonrobotics.junction.LogFileUtil;
@@ -32,12 +34,24 @@ public class Robot extends LoggedRobot {
   private Command autonomousCommand;
   private RobotContainer robotContainer;
 
+  // Working on having an option to choose different autonomous
+  private static final String kDefaultAuto = "1 Note Auto";
+  private static final String kOtherAuto = "2 Note Auto";
+
+  private String m_autoselected;
+  private final SendableChooser<String> m_chooser = new SendableChooser<>();
+
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
    */
   @Override
   public void robotInit() {
+    // Set up different auto
+
+    m_chooser.setDefaultOption("Default One Note Auto", kDefaultAuto);
+    m_chooser.addOption("2 Note Auto", kOtherAuto);
+    SmartDashboard.putData("Auto Choices", m_chooser);
     // Record metadata
     Logger.recordMetadata("ProjectName", BuildConstants.MAVEN_NAME);
     Logger.recordMetadata("BuildDate", BuildConstants.BUILD_DATE);

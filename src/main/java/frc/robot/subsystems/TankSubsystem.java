@@ -78,7 +78,7 @@ public class TankSubsystem extends SubsystemBase {
 
     m_gyro.reset();
 
-    if (!DriverStation.isAutonomous()) {
+    if (!DriverStation.isAutonomous() && !DriverStation.isTest()) {
       m_driverController = driverController;
     } else {
       m_driverController = null;
