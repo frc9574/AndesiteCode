@@ -106,7 +106,7 @@ public class RobotContainer {
   private void configureButtonBindings() {
     drive.setDefaultCommand(
         Commands.run(
-            () -> drive.driveArcade(-controller.getLeftY(), controller.getLeftX()), drive));
+            () -> drive.driveArcade(-controller.getLeftY(), controller.getRightX()), drive));
     controller.leftBumper().whileTrue(launcher.intakeCommand());
     controller.rightBumper().whileTrue(launcher.launchCommand());
   }

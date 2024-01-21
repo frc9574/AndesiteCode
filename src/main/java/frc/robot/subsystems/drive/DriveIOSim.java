@@ -25,7 +25,7 @@ public class DriveIOSim implements DriveIO {
   private static final double KD = 0.0;
   private DifferentialDrivetrainSim sim =
       DifferentialDrivetrainSim.createKitbotSim(
-          KitbotMotor.kDualCIMPerSide, KitbotGearing.k10p71, KitbotWheelSize.kSixInch, null);
+          KitbotMotor.kDoubleNEOPerSide, KitbotGearing.k10p71, KitbotWheelSize.kSixInch, null);
 
   private double leftAppliedVolts = 0.0;
   private double rightAppliedVolts = 0.0;
