@@ -31,6 +31,23 @@ public class DriveCommands {
 
   private DriveCommands() {}
 
+  /** Tank Drive Basically */
+  public static Command testDrive(
+      Drive drive,
+      DoubleSupplier xSupplier,
+      DoubleSupplier ySupplier,
+      DoubleSupplier omegaSupplier) {
+    return Commands.run(
+        () -> {
+          drive.runVelocity(
+              new ChassisSpeeds(
+                  xSupplier.getAsDouble() * drive.getMaxLinearSpeedMetersPerSec(),
+                  ySupplier.getAsDouble() * drive.getMaxLinearSpeedMetersPerSec(),
+                  omegaSupplier.getAsDouble() * drive.getMaxAngularSpeedRadPerSec()));
+        },
+        drive);
+  }
+
   /**
    * Field relative drive command using two joysticks (controlling linear and angular velocities).
    */

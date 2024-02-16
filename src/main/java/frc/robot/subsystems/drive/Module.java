@@ -49,7 +49,7 @@ public class Module {
       case REPLAY:
         driveFeedforward = new SimpleMotorFeedforward(0.1, 0.13);
         driveFeedback = new PIDController(0.05, 0.0, 0.0);
-        turnFeedback = new PIDController(7.0, 0.0, 0.0);
+        turnFeedback = new PIDController(2, 0.0, 0.0);
         break;
       case SIM:
         driveFeedforward = new SimpleMotorFeedforward(0.0, 0.13);
@@ -79,8 +79,7 @@ public class Module {
     Logger.processInputs("Drive/Module" + Integer.toString(index), inputs);
 
     // On first cycle, reset relative turn encoder
-    // Wait until absolute angle is nonzero in case it wasn't initialized yet
-    if (turnRelativeOffset == null && inputs.turnAbsolutePosition.getRadians() != 0.0) {
+    if (turnRelativeOffset == null) {
       turnRelativeOffset = inputs.turnAbsolutePosition.minus(inputs.turnPosition);
     }
 
@@ -111,7 +110,11 @@ public class Module {
     int sampleCount = inputs.odometryTimestamps.length; // All signals are sampled together
     odometryPositions = new SwerveModulePosition[sampleCount];
     for (int i = 0; i < sampleCount; i++) {
-      double positionMeters = inputs.odometryDrivePositionsRad[i] * WHEEL_RADIUS;
+      double positionMeters =
+          (inputs.odometryDrivePositionsRad[i]
+                  + inputs.odometryTurnPositions[i].getRadians()
+                      * ModuleIOSparkMax.TURN_DRIVE_INFLUENCE)
+              * WHEEL_RADIUS;
       Rotation2d angle =
           inputs.odometryTurnPositions[i].plus(
               turnRelativeOffset != null ? turnRelativeOffset : new Rotation2d());

@@ -145,7 +145,7 @@ public class RobotContainer {
    */
   private void configureButtonBindings() {
     drive.setDefaultCommand(
-        DriveCommands.joystickDrive(
+        DriveCommands.testDrive(
             drive,
             () -> -controller.getLeftY(),
             () -> -controller.getLeftX(),
