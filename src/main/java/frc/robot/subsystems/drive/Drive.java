@@ -296,4 +296,13 @@ public class Drive extends SubsystemBase {
       new Translation2d(-TRACK_WIDTH_X / 2.0, -TRACK_WIDTH_Y / 2.0)
     };
   }
+
+  public Command sysIdWearIn() {
+    return this.runOnce(
+        () -> {
+          for (int i = 0; i < 4; i++) {
+            modules[i].runBurnIn(12, 8);
+          }
+        });
+  }
 }
