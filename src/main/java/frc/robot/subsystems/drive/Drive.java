@@ -301,7 +301,7 @@ public class Drive extends SubsystemBase {
     return this.runOnce(
         () -> {
           for (int i = 0; i < 4; i++) {
-            modules[i].runBurnIn(12, 8);
+            modules[i].runBurnIn(5, 3);
           }
         });
   }
