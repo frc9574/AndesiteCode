@@ -14,6 +14,7 @@
 package frc.robot.subsystems.flywheel;
 
 import com.revrobotics.CANSparkBase.ControlType;
+import com.revrobotics.CANSparkBase.IdleMode;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
@@ -26,7 +27,7 @@ import edu.wpi.first.math.util.Units;
  * "CANSparkFlex".
  */
 public class FlywheelIOSparkMax implements FlywheelIO {
-  private static final double GEAR_RATIO = 1.5;
+  private static final double GEAR_RATIO = 1;
 
   private final CANSparkMax leader = new CANSparkMax(10, MotorType.kBrushless);
   private final CANSparkMax follower = new CANSparkMax(11, MotorType.kBrushless);
@@ -40,11 +41,16 @@ public class FlywheelIOSparkMax implements FlywheelIO {
     leader.setCANTimeout(250);
     follower.setCANTimeout(250);
 
-    leader.setInverted(false);
-    follower.follow(leader, false);
+    leader.setInverted(true);
+    follower.follow(leader, true);
+
+    leader.setIdleMode(IdleMode.kBrake);
+    follower.setIdleMode(IdleMode.kBrake);
 
     leader.enableVoltageCompensation(12.0);
-    leader.setSmartCurrentLimit(30);
+    leader.setSmartCurrentLimit(40);
+    follower.enableVoltageCompensation(12.0);
+    follower.setSmartCurrentLimit(40);
 
     leader.burnFlash();
     follower.burnFlash();

@@ -15,8 +15,6 @@ package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -34,6 +32,14 @@ import frc.robot.subsystems.flywheel.Flywheel;
 import frc.robot.subsystems.flywheel.FlywheelIO;
 import frc.robot.subsystems.flywheel.FlywheelIOSim;
 import frc.robot.subsystems.flywheel.FlywheelIOSparkMax;
+import frc.robot.subsystems.indexing.Indexing;
+import frc.robot.subsystems.indexing.IndexingIO;
+import frc.robot.subsystems.indexing.IndexingIOSim;
+import frc.robot.subsystems.indexing.IndexingIOSparkMax;
+import frc.robot.subsystems.lift.Lift;
+import frc.robot.subsystems.lift.LiftIO;
+import frc.robot.subsystems.lift.LiftIOSim;
+import frc.robot.subsystems.lift.LiftIOSparkMax;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedDashboardNumber;
 
@@ -47,6 +53,8 @@ public class RobotContainer {
   // Subsystems
   private final Drive drive;
   private final Flywheel flywheel;
+  private final Lift outtakeLift;
+  private final Indexing indexing;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -64,11 +72,13 @@ public class RobotContainer {
         drive =
             new Drive(
                 new GyroIONavx2(),
-                new ModuleIOSparkMax(0),
-                new ModuleIOSparkMax(1),
                 new ModuleIOSparkMax(2),
-                new ModuleIOSparkMax(3));
+                new ModuleIOSparkMax(3),
+                new ModuleIOSparkMax(1),
+                new ModuleIOSparkMax(0));
         flywheel = new Flywheel(new FlywheelIOSparkMax());
+        outtakeLift = new Lift(new LiftIOSparkMax());
+        indexing = new Indexing(new IndexingIOSparkMax());
         // drive = new Drive(
         // new GyroIOPigeon2(true),
         // new ModuleIOTalonFX(0),
@@ -88,6 +98,8 @@ public class RobotContainer {
                 new ModuleIOSim(),
                 new ModuleIOSim());
         flywheel = new Flywheel(new FlywheelIOSim());
+        outtakeLift = new Lift(new LiftIOSim());
+        indexing = new Indexing(new IndexingIOSim());
         break;
 
       default:
@@ -100,6 +112,8 @@ public class RobotContainer {
                 new ModuleIO() {},
                 new ModuleIO() {});
         flywheel = new Flywheel(new FlywheelIO() {});
+        outtakeLift = new Lift(new LiftIO() {});
+        indexing = new Indexing(new IndexingIO() {});
         break;
     }
 
@@ -148,24 +162,49 @@ public class RobotContainer {
     drive.setDefaultCommand(
         DriveCommands.testDrive(
             drive,
-            () -> -controller.getLeftY(),
-            () -> -controller.getLeftX(),
-            () -> -controller.getRightX()));
-    controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
-    controller
-        .b()
-        .onTrue(
-            Commands.runOnce(
-                    () ->
-                        drive.setPose(
-                            new Pose2d(drive.getPose().getTranslation(), new Rotation2d())),
-                    drive)
-                .ignoringDisable(true));
+            () -> controller.getLeftY(),
+            () -> controller.getLeftX(),
+            () -> controller.getRightY()));
+    // drive.setDefaultCommand(
+    //     DriveCommands.joystickDrive(
+    //         drive,
+    //         () -> -controller.getLeftY(),
+    //         () -> -controller.getLeftX(),
+    //         () -> -controller.getRightX()));
+    // controller
+    //     .b()
+    //     .onTrue(
+    //         Commands.runOnce(
+    //                 () ->
+    //                     drive.setPose(
+    //                         new Pose2d(drive.getPose().getTranslation(), new Rotation2d())),
+    //                 drive)
+    //             .ignoringDisable(true));
     controller
         .a()
         .whileTrue(
             Commands.startEnd(
-                () -> flywheel.runVelocity(flywheelSpeedInput.get()), flywheel::stop, flywheel));
+                () -> flywheel.runVelocity(flywheelSpeedInput.get()), flywheel::stop, flywheel))
+        .whileTrue(
+            Commands.startEnd(
+                () -> outtakeLift.runPosition(1.16),
+                () -> outtakeLift.runPosition(0.0),
+                outtakeLift));
+    controller
+        .b()
+        .whileTrue(Commands.startEnd(() -> flywheel.runVelocity(-1000), flywheel::stop, flywheel))
+        .whileTrue(
+            Commands.startEnd(
+                () -> outtakeLift.runPosition(1.16),
+                () -> outtakeLift.runPosition(0.0),
+                outtakeLift))
+        .whileTrue(Commands.startEnd(() -> indexing.runVolts(-12.0), indexing::stop, indexing));
+    controller
+        .rightBumper()
+        .whileTrue(Commands.startEnd(() -> indexing.runVolts(12.0), indexing::stop, indexing));
+    controller
+        .povDown()
+        .whileTrue(Commands.startEnd(() -> indexing.runVolts(-12.0), indexing::stop, indexing));
   }
 
   /**

@@ -11,15 +11,17 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
-package frc.robot.subsystems.flywheel;
+package frc.robot.subsystems.lift;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.wpilibj.simulation.FlywheelSim;
+import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 
-public class FlywheelIOSim implements FlywheelIO {
-  private FlywheelSim sim = new FlywheelSim(DCMotor.getNEO(1), 1, 0.004);
+public class LiftIOSim implements LiftIO {
+  private SingleJointedArmSim sim =
+      new SingleJointedArmSim(
+          DCMotor.getNEO(1), 1, 0.005, 1, Lift.baseAngle, Lift.maxAngle, true, Lift.baseAngle);
   private PIDController pid = new PIDController(0.0, 0.0, 0.0);
 
   private boolean closedLoop = false;
@@ -27,38 +29,23 @@ public class FlywheelIOSim implements FlywheelIO {
   private double appliedVolts = 0.0;
 
   @Override
-  public void updateInputs(FlywheelIOInputs inputs) {
+  public void updateInputs(LiftIOInputs inputs) {
     if (closedLoop) {
-      appliedVolts =
-          MathUtil.clamp(pid.calculate(sim.getAngularVelocityRadPerSec()) + ffVolts, -12.0, 12.0);
+      appliedVolts = MathUtil.clamp(pid.calculate(sim.getAngleRads()) + ffVolts, -12.0, 12.0);
       sim.setInputVoltage(appliedVolts);
     }
 
     sim.update(0.02);
 
-    inputs.positionRad = 0.0;
-    inputs.velocityRadPerSec = sim.getAngularVelocityRadPerSec();
-    inputs.appliedVolts = appliedVolts;
+    inputs.positionRad = sim.getAngleRads();
     inputs.currentAmps = new double[] {sim.getCurrentDrawAmps()};
   }
 
   @Override
-  public void setVoltage(double volts) {
-    closedLoop = false;
-    appliedVolts = volts;
-    sim.setInputVoltage(volts);
-  }
-
-  @Override
-  public void setVelocity(double velocityRadPerSec, double ffVolts) {
+  public void setPosition(double positionRads, double ffVolts) {
     closedLoop = true;
-    pid.setSetpoint(velocityRadPerSec);
+    pid.setSetpoint(positionRads);
     this.ffVolts = ffVolts;
-  }
-
-  @Override
-  public void stop() {
-    setVoltage(0.0);
   }
 
   @Override

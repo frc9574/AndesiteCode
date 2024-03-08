@@ -39,7 +39,7 @@ public class ModuleIOSparkMax implements ModuleIO {
 
   // Wheel to Vertical to TurnPart to Belt Low
   private static final double DRIVE_GEAR_RATIO = (15.0 / 45.0) * (50.0 / 16.0) * (12.0 / 62.0);
-  private static final double TURN_GEAR_RATIO = 18.0 / 73.0;
+  private static final double TURN_GEAR_RATIO = -18.0 / 73.0;
 
   public static final double TURN_DRIVE_INFLUENCE = (18.0 / 73.0) * (16.0 / 50.0) * (15.0 / 45.0);
 
@@ -129,7 +129,7 @@ public class ModuleIOSparkMax implements ModuleIO {
 
     inputs.turnPosition =
         Rotation2d.fromRotations(turnRelativeEncoder.getPosition() * TURN_GEAR_RATIO);
-    inputs.turnAbsolutePosition = inputs.turnPosition;
+    inputs.turnAbsolutePosition = Rotation2d.fromRadians((-0.25 * Math.PI) + Math.PI);
     inputs.turnVelocityRadPerSec =
         Units.rotationsPerMinuteToRadiansPerSecond(turnRelativeEncoder.getVelocity())
             * TURN_GEAR_RATIO;
@@ -153,12 +153,12 @@ public class ModuleIOSparkMax implements ModuleIO {
 
   @Override
   public void setDriveVoltage(double volts) {
-    driveSparkMax.setVoltage(volts);
+    driveSparkMax.setVoltage(-volts);
   }
 
   @Override
   public void setTurnVoltage(double volts) {
-    turnSparkMax.setVoltage(volts);
+    turnSparkMax.setVoltage(-volts);
   }
 
   @Override
