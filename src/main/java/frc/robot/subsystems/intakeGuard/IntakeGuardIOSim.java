@@ -11,15 +11,20 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
-package frc.robot.subsystems.lift;
+package frc.robot.subsystems.intakeGuard;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.wpilibj.simulation.ElevatorSim;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 
-public class LiftIOSim implements LiftIO {
-  private ElevatorSim sim = new ElevatorSim(DCMotor.getNEO(1), 12, 50, 0.03, 0, 0.5, true, 0);
+public class IntakeGuardIOSim implements IntakeGuardIO {
+  private DCMotorSim sim =
+      new DCMotorSim(
+          new DCMotor(12, 0.105, 8.5, 1, Units.rotationsPerMinuteToRadiansPerSecond(6000), 1),
+          125,
+          0.1);
   private PIDController pid = new PIDController(0.0, 0.0, 0.0);
 
   private boolean closedLoop = false;
@@ -27,15 +32,16 @@ public class LiftIOSim implements LiftIO {
   private double appliedVolts = 0.0;
 
   @Override
-  public void updateInputs(LiftIOInputs inputs) {
+  public void updateInputs(IntakeGuardIOInputs inputs) {
     if (closedLoop) {
-      appliedVolts = MathUtil.clamp(pid.calculate(sim.getPositionMeters()) + ffVolts, -12.0, 12.0);
+      appliedVolts =
+          MathUtil.clamp(pid.calculate(sim.getAngularPositionRad()) + ffVolts, -12.0, 12.0);
       sim.setInputVoltage(appliedVolts);
     }
 
     sim.update(0.02);
 
-    inputs.positionM = sim.getPositionMeters();
+    inputs.positionRads = sim.getAngularPositionRad();
     inputs.currentAmps = new double[] {sim.getCurrentDrawAmps()};
   }
 

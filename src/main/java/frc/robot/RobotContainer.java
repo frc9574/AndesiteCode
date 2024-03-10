@@ -15,8 +15,15 @@ package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.auto.NamedCommands;
+import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.networktables.DoubleArrayEntry;
+import edu.wpi.first.networktables.GenericEntry;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.GenericHID;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -36,10 +43,17 @@ import frc.robot.subsystems.indexing.Indexing;
 import frc.robot.subsystems.indexing.IndexingIO;
 import frc.robot.subsystems.indexing.IndexingIOSim;
 import frc.robot.subsystems.indexing.IndexingIOSparkMax;
+import frc.robot.subsystems.intakeGuard.IntakeGuard;
+import frc.robot.subsystems.intakeGuard.IntakeGuardIOSparkMax;
 import frc.robot.subsystems.lift.Lift;
 import frc.robot.subsystems.lift.LiftIO;
 import frc.robot.subsystems.lift.LiftIOSim;
 import frc.robot.subsystems.lift.LiftIOSparkMax;
+import frc.robot.subsystems.outakeLift.OutakeLift;
+import frc.robot.subsystems.outakeLift.OutakeLiftIO;
+import frc.robot.subsystems.outakeLift.OutakeLiftIOSim;
+import frc.robot.subsystems.outakeLift.OutakeLiftIOSparkMax;
+import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedDashboardNumber;
 
@@ -53,8 +67,10 @@ public class RobotContainer {
   // Subsystems
   private final Drive drive;
   private final Flywheel flywheel;
-  private final Lift outtakeLift;
+  private final OutakeLift outtakeLift;
   private final Indexing indexing;
+  private final Lift robotLift;
+  private final IntakeGuard intakeGuard;
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
@@ -63,6 +79,10 @@ public class RobotContainer {
   private final LoggedDashboardChooser<Command> autoChooser;
   private final LoggedDashboardNumber flywheelSpeedInput =
       new LoggedDashboardNumber("Flywheel Speed", 1500.0);
+  private final LoggedDashboardNumber outakeAngleFalloff =
+      new LoggedDashboardNumber("Outake angle falloff", 1.0 / 10);
+  private final LoggedDashboardNumber minOutakeFalloffDist =
+      new LoggedDashboardNumber("Minimum outake distance for falloff", 2);
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -77,15 +97,10 @@ public class RobotContainer {
                 new ModuleIOSparkMax(1),
                 new ModuleIOSparkMax(0));
         flywheel = new Flywheel(new FlywheelIOSparkMax());
-        outtakeLift = new Lift(new LiftIOSparkMax());
+        outtakeLift = new OutakeLift(new OutakeLiftIOSparkMax());
         indexing = new Indexing(new IndexingIOSparkMax());
-        // drive = new Drive(
-        // new GyroIOPigeon2(true),
-        // new ModuleIOTalonFX(0),
-        // new ModuleIOTalonFX(1),
-        // new ModuleIOTalonFX(2),
-        // new ModuleIOTalonFX(3));
-        // flywheel = new Flywheel(new FlywheelIOTalonFX());
+        robotLift = new Lift(new LiftIOSparkMax());
+        intakeGuard = new IntakeGuard(new IntakeGuardIOSparkMax());
         break;
 
       case SIM:
@@ -98,8 +113,10 @@ public class RobotContainer {
                 new ModuleIOSim(),
                 new ModuleIOSim());
         flywheel = new Flywheel(new FlywheelIOSim());
-        outtakeLift = new Lift(new LiftIOSim());
+        outtakeLift = new OutakeLift(new OutakeLiftIOSim());
         indexing = new Indexing(new IndexingIOSim());
+        robotLift = new Lift(new LiftIOSim());
+        intakeGuard = new IntakeGuard(new IntakeGuardIOSparkMax());
         break;
 
       default:
@@ -112,8 +129,10 @@ public class RobotContainer {
                 new ModuleIO() {},
                 new ModuleIO() {});
         flywheel = new Flywheel(new FlywheelIO() {});
-        outtakeLift = new Lift(new LiftIO() {});
+        outtakeLift = new OutakeLift(new OutakeLiftIO() {});
         indexing = new Indexing(new IndexingIO() {});
+        robotLift = new Lift(new LiftIO() {});
+        intakeGuard = new IntakeGuard(new IntakeGuardIOSparkMax());
         break;
     }
 
@@ -132,6 +151,7 @@ public class RobotContainer {
     autoChooser.addOption(
         "Drive SysId (Quasistatic Reverse)",
         drive.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
+    autoChooser.addOption("Turn Modules continously", drive.turnTuning());
     autoChooser.addOption(
         "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
     autoChooser.addOption(
@@ -159,18 +179,18 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
-    drive.setDefaultCommand(
-        DriveCommands.testDrive(
-            drive,
-            () -> controller.getLeftY(),
-            () -> controller.getLeftX(),
-            () -> controller.getRightY()));
     // drive.setDefaultCommand(
-    //     DriveCommands.joystickDrive(
+    //     DriveCommands.testDrive(
     //         drive,
-    //         () -> -controller.getLeftY(),
-    //         () -> -controller.getLeftX(),
-    //         () -> -controller.getRightX()));
+    //         () -> controller.getLeftY(),
+    //         () -> controller.getLeftX(),
+    //         () -> controller.getRightX()));
+    drive.setDefaultCommand(
+        DriveCommands.joystickDrive(
+            drive,
+            () -> -controller.getLeftY(),
+            () -> -controller.getLeftX(),
+            () -> controller.getRightX()));
     // controller
     //     .b()
     //     .onTrue(
@@ -180,27 +200,72 @@ public class RobotContainer {
     //                         new Pose2d(drive.getPose().getTranslation(), new Rotation2d())),
     //                 drive)
     //             .ignoringDisable(true));
+
+    CameraServer.startAutomaticCapture();
+
+    ShuffleboardTab tab = Shuffleboard.getTab("OutakeLift");
+    Double defaultHeight = 1.16;
+    GenericEntry intakeSetpoint = tab.add("IntakeSetpoint", defaultHeight).getEntry();
+    GenericEntry outtakeSetpoint = tab.add("OutakeSetpoint", defaultHeight).getEntry();
+
+    Timer robotLiftTimer = new Timer();
+    robotLift.setDefaultCommand(
+        Commands.runOnce(robotLiftTimer::start)
+            .andThen(
+                Commands.run(
+                    () -> {
+                      robotLift.moveBy(
+                          (controller.getRightTriggerAxis() * 5 - controller.getLeftTriggerAxis())
+                              // Move 5 cm per second up, and 1/s down
+                              * robotLiftTimer.get());
+                      robotLiftTimer.reset();
+                    },
+                    robotLift)));
+
+    controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
+    controller.back().onTrue(Commands.runOnce(drive::stopWithReset, drive));
+    controller
+        .start()
+        .whileTrue(Commands.startEnd(intakeGuard::goOut, intakeGuard::goIn, intakeGuard));
+
+    // Get table for the key "Top/Right/tag/3" from networktables
+    DoubleArrayEntry tagEntry =
+        NetworkTableInstance.getDefault()
+            .getTable("Top_Right")
+            .getDoubleArrayTopic("tag_3")
+            .getEntry(new double[] {0});
+
     controller
         .a()
         .whileTrue(
             Commands.startEnd(
                 () -> flywheel.runVelocity(flywheelSpeedInput.get()), flywheel::stop, flywheel))
         .whileTrue(
-            Commands.startEnd(
-                () -> outtakeLift.runPosition(1.16),
-                () -> outtakeLift.runPosition(0.0),
-                outtakeLift));
+            Commands.run(
+                    () -> {
+                      outtakeLift.runPosition(
+                          outtakeSetpoint.getDouble(defaultHeight)
+                              - (Math.max(tagEntry.get()[0] - minOutakeFalloffDist.get(), 0)
+                                  * outakeAngleFalloff.get()));
+                      Logger.recordOutput("Vision/ObservedDistance", tagEntry.get()[0]);
+                    },
+                    outtakeLift)
+                .finallyDo(() -> outtakeLift.runPosition(0.0)));
     controller
         .b()
         .whileTrue(Commands.startEnd(() -> flywheel.runVelocity(-1000), flywheel::stop, flywheel))
+        .whileTrue(Commands.startEnd(intakeGuard::goOut, intakeGuard::goIn, intakeGuard))
         .whileTrue(
             Commands.startEnd(
-                () -> outtakeLift.runPosition(1.16),
+                () -> outtakeLift.runPosition(intakeSetpoint.getDouble(defaultHeight)),
                 () -> outtakeLift.runPosition(0.0),
                 outtakeLift))
         .whileTrue(Commands.startEnd(() -> indexing.runVolts(-12.0), indexing::stop, indexing));
     controller
         .rightBumper()
+        .whileTrue(Commands.startEnd(() -> indexing.runVolts(12.0), indexing::stop, indexing));
+    controller
+        .povUp()
         .whileTrue(Commands.startEnd(() -> indexing.runVolts(12.0), indexing::stop, indexing));
     controller
         .povDown()

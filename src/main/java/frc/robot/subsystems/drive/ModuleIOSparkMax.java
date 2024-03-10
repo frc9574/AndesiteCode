@@ -87,7 +87,7 @@ public class ModuleIOSparkMax implements ModuleIO {
 
     turnSparkMax.setInverted(isTurnMotorInverted);
     driveSparkMax.setSmartCurrentLimit(40);
-    turnSparkMax.setSmartCurrentLimit(40);
+    turnSparkMax.setSmartCurrentLimit(80);
     driveSparkMax.enableVoltageCompensation(12.0);
     turnSparkMax.enableVoltageCompensation(12.0);
 
@@ -119,17 +119,15 @@ public class ModuleIOSparkMax implements ModuleIO {
   @Override
   public void updateInputs(ModuleIOInputs inputs) {
     inputs.drivePositionRad =
-        Units.rotationsToRadians(driveEncoder.getPosition()) * DRIVE_GEAR_RATIO
-            + TURN_DRIVE_INFLUENCE * turnRelativeEncoder.getPosition();
+        Units.rotationsToRadians(driveEncoder.getPosition()) * DRIVE_GEAR_RATIO;
     inputs.driveVelocityRadPerSec =
-        Units.rotationsPerMinuteToRadiansPerSecond(driveEncoder.getVelocity()) * DRIVE_GEAR_RATIO
-            + TURN_DRIVE_INFLUENCE * turnRelativeEncoder.getVelocity();
+        Units.rotationsPerMinuteToRadiansPerSecond(driveEncoder.getVelocity()) * DRIVE_GEAR_RATIO;
     inputs.driveAppliedVolts = driveSparkMax.getAppliedOutput() * driveSparkMax.getBusVoltage();
     inputs.driveCurrentAmps = new double[] {driveSparkMax.getOutputCurrent()};
 
     inputs.turnPosition =
         Rotation2d.fromRotations(turnRelativeEncoder.getPosition() * TURN_GEAR_RATIO);
-    inputs.turnAbsolutePosition = Rotation2d.fromRadians((-0.25 * Math.PI) + Math.PI);
+    inputs.turnAbsolutePosition = Rotation2d.fromRadians((-0.25 * Math.PI));
     inputs.turnVelocityRadPerSec =
         Units.rotationsPerMinuteToRadiansPerSecond(turnRelativeEncoder.getVelocity())
             * TURN_GEAR_RATIO;
@@ -153,7 +151,7 @@ public class ModuleIOSparkMax implements ModuleIO {
 
   @Override
   public void setDriveVoltage(double volts) {
-    driveSparkMax.setVoltage(-volts);
+    driveSparkMax.setVoltage(volts);
   }
 
   @Override

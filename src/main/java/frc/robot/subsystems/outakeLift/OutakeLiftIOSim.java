@@ -11,15 +11,24 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
-package frc.robot.subsystems.lift;
+package frc.robot.subsystems.outakeLift;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.wpilibj.simulation.ElevatorSim;
+import edu.wpi.first.wpilibj.simulation.SingleJointedArmSim;
 
-public class LiftIOSim implements LiftIO {
-  private ElevatorSim sim = new ElevatorSim(DCMotor.getNEO(1), 12, 50, 0.03, 0, 0.5, true, 0);
+public class OutakeLiftIOSim implements OutakeLiftIO {
+  private SingleJointedArmSim sim =
+      new SingleJointedArmSim(
+          DCMotor.getNEO(1),
+          1,
+          0.005,
+          1,
+          OutakeLift.baseAngle,
+          OutakeLift.maxAngle,
+          true,
+          OutakeLift.baseAngle);
   private PIDController pid = new PIDController(0.0, 0.0, 0.0);
 
   private boolean closedLoop = false;
@@ -27,22 +36,23 @@ public class LiftIOSim implements LiftIO {
   private double appliedVolts = 0.0;
 
   @Override
-  public void updateInputs(LiftIOInputs inputs) {
+  public void updateInputs(OutakeLiftIOInputs inputs) {
     if (closedLoop) {
-      appliedVolts = MathUtil.clamp(pid.calculate(sim.getPositionMeters()) + ffVolts, -12.0, 12.0);
+      appliedVolts = MathUtil.clamp(pid.calculate(sim.getAngleRads()) + ffVolts, -12.0, 12.0);
       sim.setInputVoltage(appliedVolts);
     }
 
     sim.update(0.02);
 
-    inputs.positionM = sim.getPositionMeters();
+    inputs.positionRad = sim.getAngleRads();
     inputs.currentAmps = new double[] {sim.getCurrentDrawAmps()};
   }
 
   @Override
-  public void setPosition(double positionRads) {
+  public void setPosition(double positionRads, double ffVolts) {
     closedLoop = true;
     pid.setSetpoint(positionRads);
+    this.ffVolts = ffVolts;
   }
 
   @Override

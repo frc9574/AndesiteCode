@@ -1,4 +1,4 @@
-package frc.robot.subsystems.lift;
+package frc.robot.subsystems.outakeLift;
 
 import com.revrobotics.CANSparkBase.ControlType;
 import com.revrobotics.CANSparkBase.IdleMode;
@@ -6,18 +6,20 @@ import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.SparkPIDController;
+import com.revrobotics.SparkPIDController.ArbFFUnits;
+import edu.wpi.first.math.util.Units;
 import org.littletonrobotics.junction.Logger;
 
 /**
  * NOTE: To use the Spark Flex / NEO Vortex, replace all instances of "CANSparkMax" with
  * "CANSparkFlex".
  */
-public class LiftIOSparkMax implements LiftIO {
-  private final CANSparkMax leader = new CANSparkMax(15, MotorType.kBrushless);
+public class OutakeLiftIOSparkMax implements OutakeLiftIO {
+  private final CANSparkMax leader = new CANSparkMax(14, MotorType.kBrushless);
   private final RelativeEncoder encoder = leader.getEncoder();
   private final SparkPIDController pid = leader.getPIDController();
 
-  public LiftIOSparkMax() {
+  public OutakeLiftIOSparkMax() {
     leader.restoreFactoryDefaults();
     leader.setIdleMode(IdleMode.kBrake);
 
@@ -28,15 +30,19 @@ public class LiftIOSparkMax implements LiftIO {
     leader.enableVoltageCompensation(12.0);
     leader.setSmartCurrentLimit(80);
 
-    configurePID(0.1, 0.3, 0.0);
+    configurePID(0.1, 0.0, 0.0);
 
     leader.burnFlash();
   }
 
   @Override
-  public void updateInputs(LiftIOInputs inputs) {
-    inputs.positionM = encoder.getPosition() * Lift.gearRatio * 0.3 * 2 * Math.PI;
-    Logger.recordOutput("Lift/SparkRawEncoder", encoder.getPosition());
+  public void updateInputs(OutakeLiftIOInputs inputs) {
+    if (encoder.getPosition() < 0) {
+      encoder.setPosition(0);
+    }
+
+    inputs.positionRad = Units.rotationsToRadians(encoder.getPosition() * OutakeLift.gearRatio);
+    Logger.recordOutput("OutakeLift/SparkRawEncoder", encoder.getPosition());
     inputs.outputVolts = leader.getAppliedOutput();
     inputs.currentAmps = new double[] {leader.getOutputCurrent()};
   }
@@ -44,15 +50,25 @@ public class LiftIOSparkMax implements LiftIO {
   private boolean hasReset = false;
 
   @Override
-  public void setPosition(double positionM) {
+  public void setPosition(double positionRads, double ffVolts) {
     if (!hasReset) {
       encoder.setPosition(0);
       hasReset = true;
     }
 
-    Logger.recordOutput("Lift/SparkSetPoint", positionM / Lift.gearRatio / 0.3 / 2 / Math.PI);
+    Logger.recordOutput("OutakeLift/FFVolts", ffVolts);
 
-    pid.setReference(positionM / Lift.gearRatio / 0.3 / 2 / Math.PI, ControlType.kPosition);
+    if (positionRads == 0) {
+      leader.set(0);
+      return;
+    }
+
+    pid.setReference(
+        Units.radiansToRotations(positionRads / OutakeLift.gearRatio),
+        ControlType.kPosition,
+        0,
+        ffVolts,
+        ArbFFUnits.kVoltage);
   }
 
   @Override

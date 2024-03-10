@@ -27,7 +27,7 @@ import frc.robot.subsystems.drive.Drive;
 import java.util.function.DoubleSupplier;
 
 public class DriveCommands {
-  private static final double DEADBAND = 0.1;
+  private static final double DEADBAND = 0.05;
 
   private DriveCommands() {}
 
@@ -41,9 +41,12 @@ public class DriveCommands {
         () -> {
           drive.runVelocity(
               new ChassisSpeeds(
-                  xSupplier.getAsDouble() * drive.getMaxLinearSpeedMetersPerSec(),
-                  ySupplier.getAsDouble() * drive.getMaxLinearSpeedMetersPerSec(),
-                  omegaSupplier.getAsDouble() * drive.getMaxAngularSpeedRadPerSec()));
+                  MathUtil.applyDeadband(xSupplier.getAsDouble(), DEADBAND)
+                      * drive.getMaxLinearSpeedMetersPerSec(),
+                  MathUtil.applyDeadband(ySupplier.getAsDouble(), DEADBAND)
+                      * drive.getMaxLinearSpeedMetersPerSec(),
+                  MathUtil.applyDeadband(omegaSupplier.getAsDouble(), DEADBAND)
+                      * drive.getMaxAngularSpeedRadPerSec()));
         },
         drive);
   }

@@ -29,9 +29,9 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -43,11 +43,11 @@ import org.littletonrobotics.junction.Logger;
 
 public class Drive extends SubsystemBase {
   private static final double MAX_LINEAR_SPEED = 2;
-  private static final double TRACK_WIDTH_X = Units.inchesToMeters(25.0);
-  private static final double TRACK_WIDTH_Y = Units.inchesToMeters(25.0);
+  private static final double TRACK_WIDTH_X = 0.42;
+  private static final double TRACK_WIDTH_Y = 0.42;
   private static final double DRIVE_BASE_RADIUS =
       Math.hypot(TRACK_WIDTH_X / 2.0, TRACK_WIDTH_Y / 2.0);
-  private static final double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED / DRIVE_BASE_RADIUS;
+  private static final double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED / DRIVE_BASE_RADIUS / 1.5;
 
   static final Lock odometryLock = new ReentrantLock();
   private final GyroIO gyroIO;
@@ -220,6 +220,41 @@ public class Drive extends SubsystemBase {
     }
     kinematics.resetHeadings(headings);
     stop();
+  }
+
+  public void stopWithReset() {
+    Rotation2d[] headings = new Rotation2d[4];
+    for (int i = 0; i < 4; i++) {
+      headings[i] = modules[i].turnRelativeOffset;
+    }
+    kinematics.resetHeadings(headings);
+    stop();
+  }
+
+  public void pointDirection(Rotation2d dir) {
+    Rotation2d[] headings = new Rotation2d[4];
+    for (int i = 0; i < 4; i++) {
+      headings[i] = dir;
+    }
+    kinematics.resetHeadings(headings);
+  }
+
+  public Command turnTuning() {
+    edu.wpi.first.wpilibj.Timer timer = new Timer();
+    return this.runOnce(timer::start)
+        .andThen(
+            this.run(
+                () -> {
+                  // Point 90 degrees each second
+                  Integer pos = (int) timer.get() / 4 % 4;
+                  Double mult = 0.01;
+                  Logger.recordOutput("Drive/TurnTuningRotation", pos);
+                  this.runVelocity(
+                      new ChassisSpeeds(
+                          mult * (pos == 0 ? 1 : pos == 2 ? -1 : 0),
+                          mult * (pos == 1 ? 1 : pos == 3 ? -1 : 0),
+                          0));
+                }));
   }
 
   /** Returns a command to run a quasistatic test in the specified direction. */

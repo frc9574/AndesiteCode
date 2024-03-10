@@ -1,4 +1,4 @@
-package frc.robot.subsystems.lift;
+package frc.robot.subsystems.intakeGuard;
 
 import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.networktables.NetworkTableType;
@@ -10,29 +10,23 @@ import frc.robot.Constants;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
-public class Lift extends SubsystemBase {
-  private final LiftIO io;
-  private final LiftIOInputsAutoLogged inputs = new LiftIOInputsAutoLogged();
+public class IntakeGuard extends SubsystemBase {
+  private final IntakeGuardIO io;
+  private final IntakeGuardIOInputsAutoLogged inputs = new IntakeGuardIOInputsAutoLogged();
   private final GenericEntry liftSetpoint;
 
-  public static final double maxPos = 10000;
-  public static final double gearRatio = 1.0 / 12.0;
-
-  public double target_position = 0;
+  public static final double maxPos = 0.53;
 
   /** Creates a new Lift. */
-  public Lift(LiftIO io) {
+  public IntakeGuard(IntakeGuardIO io) {
     this.io = io;
 
-    ShuffleboardTab tab = Shuffleboard.getTab("Lift");
+    ShuffleboardTab tab = Shuffleboard.getTab("IntakeGuard");
     liftSetpoint = tab.add("Setpoint", 0.0).getEntry();
 
     // Switch constants based on mode (the physics simulator is treated as a
     // separate robot with different tuning)
     switch (Constants.currentMode) {
-      case REAL:
-      case REPLAY:
-        break;
       case SIM:
         io.configurePID(0.25, 0.0, 0.0);
         break;
@@ -48,35 +42,37 @@ public class Lift extends SubsystemBase {
     // Take the overide input and apply it to the lift
     for (NetworkTableValue entry : liftSetpoint.readQueue()) {
       if (entry.getType() == NetworkTableType.kDouble) {
-        Logger.recordOutput("Lift/OverideRad", entry.getDouble());
         runPosition(entry.getDouble());
       }
     }
 
-    Logger.processInputs("Lift", inputs);
+    Logger.processInputs("IntakeGuard", inputs);
   }
 
   /** Run closed loop at the specified position. */
-  public void runPosition(double positionM) {
+  public void runPosition(double positionRads) {
     // Clamp setpoint to be within the range of the lift
-    positionM = Math.max(0, Math.min(maxPos, positionM));
+    positionRads = Math.max(0, Math.min(maxPos, positionRads));
 
     // Set the setpoint
-    io.setPosition(positionM);
-    target_position = positionM;
+    io.setPosition(positionRads);
 
     // Log flywheel setpoint
-    Logger.recordOutput("Lift/SetpointRad", positionM);
-    liftSetpoint.setDouble(positionM);
+    Logger.recordOutput("IntakeGuard/SetpointRad", positionRads);
+    liftSetpoint.setDouble(positionRads);
     liftSetpoint.readQueue();
   }
 
-  public void moveBy(double deltaM) {
-    runPosition(target_position + deltaM);
+  @AutoLogOutput
+  public double getPositionRads() {
+    return inputs.positionRads;
   }
 
-  @AutoLogOutput
-  public double getPositionM() {
-    return inputs.positionM;
+  public void goOut() {
+    runPosition(maxPos);
+  }
+
+  public void goIn() {
+    runPosition(0);
   }
 }

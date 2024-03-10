@@ -28,7 +28,7 @@ public class GyroIONavx2 implements GyroIO {
     navx.zeroYaw();
 
     yawTimestampQueue = SparkMaxOdometryThread.getInstance().makeTimestampQueue();
-    yawPositionQueue = SparkMaxOdometryThread.getInstance().registerSignal(() -> navx.getYaw());
+    yawPositionQueue = SparkMaxOdometryThread.getInstance().registerSignal(() -> -navx.getYaw());
   }
 
   @Override
