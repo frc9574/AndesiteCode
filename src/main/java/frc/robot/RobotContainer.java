@@ -80,9 +80,9 @@ public class RobotContainer {
   private final LoggedDashboardNumber flywheelSpeedInput =
       new LoggedDashboardNumber("Flywheel Speed", 1500.0);
   private final LoggedDashboardNumber outakeAngleFalloff =
-      new LoggedDashboardNumber("Outake angle falloff", 1.0 / 10);
+      new LoggedDashboardNumber("Outake angle falloff", 2.91 / 10000.0);
   private final LoggedDashboardNumber minOutakeFalloffDist =
-      new LoggedDashboardNumber("Minimum outake distance for falloff", 2);
+      new LoggedDashboardNumber("Minimum outake distance for falloff", 0.244);
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -206,7 +206,6 @@ public class RobotContainer {
     ShuffleboardTab tab = Shuffleboard.getTab("OutakeLift");
     Double defaultHeight = 1.16;
     GenericEntry intakeSetpoint = tab.add("IntakeSetpoint", defaultHeight).getEntry();
-    GenericEntry outtakeSetpoint = tab.add("OutakeSetpoint", defaultHeight).getEntry();
 
     Timer robotLiftTimer = new Timer();
     robotLift.setDefaultCommand(
@@ -238,15 +237,21 @@ public class RobotContainer {
     controller
         .a()
         .whileTrue(
-            Commands.startEnd(
-                () -> flywheel.runVelocity(flywheelSpeedInput.get()), flywheel::stop, flywheel))
+            Commands.run(
+                    () -> {
+                      flywheel.runVelocity(
+                          (tagEntry.get()[0] * 2.0701)
+                          + 983.55);
+                      Logger.recordOutput("Vision/ObservedDistance", tagEntry.get()[0]);
+                    },
+                    flywheel)
+                .finallyDo(flywheel::stop))
         .whileTrue(
             Commands.run(
                     () -> {
                       outtakeLift.runPosition(
-                          outtakeSetpoint.getDouble(defaultHeight)
-                              - (Math.max(tagEntry.get()[0] - minOutakeFalloffDist.get(), 0)
-                                  * outakeAngleFalloff.get()));
+                          -(tagEntry.get()[0] * outakeAngleFalloff.get())
+                          + minOutakeFalloffDist.get());
                       Logger.recordOutput("Vision/ObservedDistance", tagEntry.get()[0]);
                     },
                     outtakeLift)
