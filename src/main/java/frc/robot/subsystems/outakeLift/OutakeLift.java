@@ -18,7 +18,7 @@ public class OutakeLift extends SubsystemBase {
   private final GenericEntry liftSetpoint;
 
   public static final double baseAngle = 0.0;
-  public static final double maxAngle = 1.16;
+  public static final double maxAngle = 1.6;
   public static final double gearRatio = 0.0464;
 
   /** Creates a new Lift. */

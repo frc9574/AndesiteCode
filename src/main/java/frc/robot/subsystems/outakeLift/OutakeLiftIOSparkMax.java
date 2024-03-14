@@ -30,7 +30,7 @@ public class OutakeLiftIOSparkMax implements OutakeLiftIO {
     leader.enableVoltageCompensation(12.0);
     leader.setSmartCurrentLimit(80);
 
-    configurePID(0.1, 0.0, 0.0);
+    configurePID(0.1, 0.01, 0.0);
 
     leader.burnFlash();
   }

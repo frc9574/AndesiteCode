@@ -19,13 +19,16 @@ import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.networktables.DoubleArrayEntry;
 import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.commands.DriveCommands;
@@ -53,6 +56,9 @@ import frc.robot.subsystems.outakeLift.OutakeLift;
 import frc.robot.subsystems.outakeLift.OutakeLiftIO;
 import frc.robot.subsystems.outakeLift.OutakeLiftIOSim;
 import frc.robot.subsystems.outakeLift.OutakeLiftIOSparkMax;
+
+import java.util.Optional;
+
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedDashboardNumber;
@@ -72,17 +78,20 @@ public class RobotContainer {
   private final Lift robotLift;
   private final IntakeGuard intakeGuard;
 
+  private DoubleArrayEntry tagEntry;
+
   // Controller
-  private final CommandXboxController controller = new CommandXboxController(0);
+  private final CommandPS4Controller driveController = new CommandPS4Controller(0);
+  private final CommandXboxController controller = new CommandXboxController(1);
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
   private final LoggedDashboardNumber flywheelSpeedInput =
       new LoggedDashboardNumber("Flywheel Speed", 1500.0);
   private final LoggedDashboardNumber outakeAngleFalloff =
-      new LoggedDashboardNumber("Outake angle falloff", 2.91 / 10000.0);
+      new LoggedDashboardNumber("Outake angle falloff", 0.0025);
   private final LoggedDashboardNumber minOutakeFalloffDist =
-      new LoggedDashboardNumber("Minimum outake distance for falloff", 0.244);
+      new LoggedDashboardNumber("Minimum outake distance for falloff", 1.50);
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -182,15 +191,16 @@ public class RobotContainer {
     // drive.setDefaultCommand(
     //     DriveCommands.testDrive(
     //         drive,
-    //         () -> controller.getLeftY(),
-    //         () -> controller.getLeftX(),
-    //         () -> controller.getRightX()));
+    //         () -> driveController.getLeftY(),
+    //         () -> driveController.getLeftX(),
+    //         () -> driveController.getRightX()));
     drive.setDefaultCommand(
         DriveCommands.joystickDrive(
             drive,
-            () -> -controller.getLeftY(),
-            () -> -controller.getLeftX(),
-            () -> controller.getRightX()));
+            () -> -driveController.getLeftY(),
+            () -> -driveController.getLeftX(),
+            () -> driveController.getRightX()));
+
     // controller
     //     .b()
     //     .onTrue(
@@ -205,7 +215,7 @@ public class RobotContainer {
 
     ShuffleboardTab tab = Shuffleboard.getTab("OutakeLift");
     Double defaultHeight = 1.16;
-    GenericEntry intakeSetpoint = tab.add("IntakeSetpoint", defaultHeight).getEntry();
+    GenericEntry intakeSetpoint = tab.add("IntakeSetpoint", 0.77).getEntry();
 
     Timer robotLiftTimer = new Timer();
     robotLift.setDefaultCommand(
@@ -221,28 +231,19 @@ public class RobotContainer {
                     },
                     robotLift)));
 
-    controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
-    controller.back().onTrue(Commands.runOnce(drive::stopWithReset, drive));
+    driveController.cross().onTrue(Commands.runOnce(drive::stopWithX, drive));
+    driveController.options().onTrue(Commands.runOnce(drive::stopWithReset, drive));
     controller
         .start()
         .whileTrue(Commands.startEnd(intakeGuard::goOut, intakeGuard::goIn, intakeGuard));
-
-    // Get table for the key "Top/Right/tag/3" from networktables
-    DoubleArrayEntry tagEntry =
-        NetworkTableInstance.getDefault()
-            .getTable("Top_Right")
-            .getDoubleArrayTopic("tag_3")
-            .getEntry(new double[] {0});
 
     controller
         .a()
         .whileTrue(
             Commands.run(
                     () -> {
-                      flywheel.runVelocity(
-                          (tagEntry.get()[0] * 2.0701)
-                          + 983.55);
-                      Logger.recordOutput("Vision/ObservedDistance", tagEntry.get()[0]);
+                      flywheel.runVelocity((this.getDistance() * 100 * 0.828) + 1793);
+                      Logger.recordOutput("Vision/ObservedDistance", this.getDistance());
                     },
                     flywheel)
                 .finallyDo(flywheel::stop))
@@ -250,9 +251,9 @@ public class RobotContainer {
             Commands.run(
                     () -> {
                       outtakeLift.runPosition(
-                          -(tagEntry.get()[0] * outakeAngleFalloff.get())
-                          + minOutakeFalloffDist.get());
-                      Logger.recordOutput("Vision/ObservedDistance", tagEntry.get()[0]);
+                          -(this.getDistance() * 100 * outakeAngleFalloff.get())
+                              + minOutakeFalloffDist.get());
+                      Logger.recordOutput("Vision/ObservedDistance", this.getDistance());
                     },
                     outtakeLift)
                 .finallyDo(() -> outtakeLift.runPosition(0.0)));
@@ -275,6 +276,19 @@ public class RobotContainer {
     controller
         .povDown()
         .whileTrue(Commands.startEnd(() -> indexing.runVolts(-12.0), indexing::stop, indexing));
+  }
+
+  public void updateAlliance() {
+    tagEntry =
+        NetworkTableInstance.getDefault()
+            .getTable("Top_Right")
+            .getDoubleArrayTopic(DriverStation.getAlliance().equals(Optional.of(Alliance.Blue)) ? "tag_7" : "tag_4")
+            .getEntry(new double[] {0, 0});
+  }
+
+  public double getDistance() {
+    // Pythag
+    return Math.sqrt(Math.pow(tagEntry.get()[0], 2) + Math.pow(tagEntry.get()[1], 2));
   }
 
   /**
