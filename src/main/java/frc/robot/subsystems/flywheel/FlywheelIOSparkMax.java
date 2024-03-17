@@ -31,8 +31,9 @@ public class FlywheelIOSparkMax implements FlywheelIO {
 
   private final CANSparkMax leader = new CANSparkMax(10, MotorType.kBrushless);
   private final CANSparkMax follower = new CANSparkMax(11, MotorType.kBrushless);
-  private final RelativeEncoder encoder = leader.getEncoder();
-  private final SparkPIDController pid = leader.getPIDController();
+  private final RelativeEncoder leaderEncoder = leader.getEncoder();
+  private final SparkPIDController leaderPid = leader.getPIDController();
+  private final SparkPIDController followerPid = follower.getPIDController();
 
   public FlywheelIOSparkMax() {
     leader.restoreFactoryDefaults();
@@ -42,7 +43,7 @@ public class FlywheelIOSparkMax implements FlywheelIO {
     follower.setCANTimeout(250);
 
     leader.setInverted(true);
-    follower.follow(leader, true);
+    follower.setInverted(false);
 
     leader.setIdleMode(IdleMode.kBrake);
     follower.setIdleMode(IdleMode.kBrake);
@@ -52,15 +53,17 @@ public class FlywheelIOSparkMax implements FlywheelIO {
     follower.enableVoltageCompensation(12.0);
     follower.setSmartCurrentLimit(40);
 
+    configurePID(0.0001, 0.000001, 0);
+
     leader.burnFlash();
     follower.burnFlash();
   }
 
   @Override
   public void updateInputs(FlywheelIOInputs inputs) {
-    inputs.positionRad = Units.rotationsToRadians(encoder.getPosition() / GEAR_RATIO);
+    inputs.positionRad = Units.rotationsToRadians(leaderEncoder.getPosition() / GEAR_RATIO);
     inputs.velocityRadPerSec =
-        Units.rotationsPerMinuteToRadiansPerSecond(encoder.getVelocity() / GEAR_RATIO);
+        Units.rotationsPerMinuteToRadiansPerSecond(leaderEncoder.getVelocity() / GEAR_RATIO);
     inputs.appliedVolts = leader.getAppliedOutput() * leader.getBusVoltage();
     inputs.currentAmps = new double[] {leader.getOutputCurrent(), follower.getOutputCurrent()};
   }
@@ -68,11 +71,18 @@ public class FlywheelIOSparkMax implements FlywheelIO {
   @Override
   public void setVoltage(double volts) {
     leader.setVoltage(volts);
+    follower.setVoltage(volts);
   }
 
   @Override
   public void setVelocity(double velocityRadPerSec, double ffVolts) {
-    pid.setReference(
+    leaderPid.setReference(
+        Units.radiansPerSecondToRotationsPerMinute(velocityRadPerSec) * GEAR_RATIO,
+        ControlType.kVelocity,
+        0,
+        ffVolts,
+        ArbFFUnits.kVoltage);
+    followerPid.setReference(
         Units.radiansPerSecondToRotationsPerMinute(velocityRadPerSec) * GEAR_RATIO,
         ControlType.kVelocity,
         0,
@@ -81,15 +91,40 @@ public class FlywheelIOSparkMax implements FlywheelIO {
   }
 
   @Override
+  public void setVelocity(
+      double topVelocityRadPerSec,
+      double topffVolts,
+      double bottomVelocityRadPerSec,
+      double bottomffVolts) {
+    leaderPid.setReference(
+        Units.radiansPerSecondToRotationsPerMinute(bottomVelocityRadPerSec) * GEAR_RATIO,
+        ControlType.kVelocity,
+        1,
+        topffVolts,
+        ArbFFUnits.kVoltage);
+    followerPid.setReference(
+        Units.radiansPerSecondToRotationsPerMinute(bottomVelocityRadPerSec) * GEAR_RATIO,
+        ControlType.kVelocity,
+        1,
+        bottomffVolts,
+        ArbFFUnits.kVoltage);
+  }
+
+  @Override
   public void stop() {
     leader.stopMotor();
+    follower.stopMotor();
   }
 
   @Override
   public void configurePID(double kP, double kI, double kD) {
-    pid.setP(kP, 0);
-    pid.setI(kI, 0);
-    pid.setD(kD, 0);
-    pid.setFF(0, 0);
+    leaderPid.setP(kP, 0);
+    leaderPid.setI(kI, 0);
+    leaderPid.setD(kD, 0);
+    leaderPid.setFF(0, 0);
+    followerPid.setP(kP, 0);
+    followerPid.setI(kI, 0);
+    followerPid.setD(kD, 0);
+    followerPid.setFF(0, 0);
   }
 }

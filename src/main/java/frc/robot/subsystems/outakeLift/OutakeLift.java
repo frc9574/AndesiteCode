@@ -18,7 +18,7 @@ public class OutakeLift extends SubsystemBase {
   private final GenericEntry liftSetpoint;
 
   public static final double baseAngle = 0.0;
-  public static final double maxAngle = 1.6;
+  public static final double maxAngle = 1.2;
   public static final double gearRatio = 0.0464;
 
   /** Creates a new Lift. */
@@ -34,7 +34,7 @@ public class OutakeLift extends SubsystemBase {
       case REAL:
       case REPLAY:
         ffModel = new ArmFeedforward(0, 1, 0);
-        io.configurePID(0.1, 0.0, 0.0);
+        io.configurePID(0.1, 0.00001, 0.0);
         break;
       case SIM:
         ffModel = new ArmFeedforward(0, 0.5, 0);

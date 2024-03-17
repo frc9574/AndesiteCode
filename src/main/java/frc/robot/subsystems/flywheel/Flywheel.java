@@ -40,7 +40,7 @@ public class Flywheel extends SubsystemBase {
       case REAL:
       case REPLAY:
         ffModel = new SimpleMotorFeedforward(0.1, 0.05);
-        io.configurePID(1.0, 0.0, 0.0);
+        // io.configurePID(1.0, 0.0, 0.0);
         break;
       case SIM:
         ffModel = new SimpleMotorFeedforward(0.0, 0.03);
@@ -82,9 +82,23 @@ public class Flywheel extends SubsystemBase {
     Logger.recordOutput("Flywheel/SetpointRPM", velocityRPM);
   }
 
+  public void runVelocity(double velocityRPM, double ratio) {
+    var velocityRadPerSec = Units.rotationsPerMinuteToRadiansPerSecond(velocityRPM);
+    io.setVelocity(
+        velocityRadPerSec * ratio,
+        ffModel.calculate(velocityRadPerSec * ratio),
+        velocityRadPerSec * (1 - ratio),
+        ffModel.calculate(velocityRadPerSec * (1 - ratio)));
+
+    // Log flywheel setpoint
+    Logger.recordOutput("Flywheel/SetpointRPM", velocityRPM);
+    Logger.recordOutput("Flywheel/Ratio", ratio);
+  }
+
   /** Stops the flywheel. */
   public void stop() {
     io.stop();
+    Logger.recordOutput("Flywheel/SetpointRPM", 0.0);
   }
 
   /** Returns a command to run a quasistatic test in the specified direction. */

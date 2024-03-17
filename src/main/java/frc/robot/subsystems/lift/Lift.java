@@ -59,7 +59,7 @@ public class Lift extends SubsystemBase {
   /** Run closed loop at the specified position. */
   public void runPosition(double positionM) {
     // Clamp setpoint to be within the range of the lift
-    positionM = Math.max(0, Math.min(maxPos, positionM));
+    positionM = Math.max(-1000, Math.min(maxPos, positionM));
 
     // Set the setpoint
     io.setPosition(positionM);

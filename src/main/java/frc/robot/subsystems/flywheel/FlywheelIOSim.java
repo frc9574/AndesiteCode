@@ -57,6 +57,17 @@ public class FlywheelIOSim implements FlywheelIO {
   }
 
   @Override
+  public void setVelocity(
+      double topVelocityRadPerSec,
+      double topffVolts,
+      double bottomVelocityRadPerSec,
+      double bottomffVolts) {
+    closedLoop = true;
+    pid.setSetpoint(topVelocityRadPerSec);
+    this.ffVolts = topffVolts;
+  }
+
+  @Override
   public void stop() {
     setVoltage(0.0);
   }

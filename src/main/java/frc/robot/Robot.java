@@ -87,6 +87,7 @@ public class Robot extends LoggedRobot {
     // Instantiate our RobotContainer. This will perform all our button bindings,
     // and put our autonomous chooser on the dashboard.
     robotContainer = new RobotContainer();
+    robotContainer.updateAlliance();
   }
 
   /** This function is called periodically during all modes. */
@@ -112,6 +113,7 @@ public class Robot extends LoggedRobot {
   @Override
   public void autonomousInit() {
     autonomousCommand = robotContainer.getAutonomousCommand();
+    robotContainer.updateAlliance();
 
     // schedule the autonomous command (example)
     if (autonomousCommand != null) {
@@ -130,6 +132,7 @@ public class Robot extends LoggedRobot {
     // teleop starts running. If you want the autonomous to
     // continue until interrupted by another command, remove
     // this line or comment it out.
+    robotContainer.updateAlliance();
     if (autonomousCommand != null) {
       autonomousCommand.cancel();
     }
@@ -144,6 +147,7 @@ public class Robot extends LoggedRobot {
   public void testInit() {
     // Cancels all running commands at the start of test mode.
     CommandScheduler.getInstance().cancelAll();
+    robotContainer.updateAlliance();
   }
 
   /** This function is called periodically during test mode. */
@@ -152,7 +156,9 @@ public class Robot extends LoggedRobot {
 
   /** This function is called once when the robot is first started up. */
   @Override
-  public void simulationInit() {}
+  public void simulationInit() {
+    robotContainer.updateAlliance();
+  }
 
   /** This function is called periodically whilst in simulation. */
   @Override

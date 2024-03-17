@@ -2,10 +2,10 @@
   "version": 1.0,
   "startingPose": {
     "position": {
-      "x": 2.0,
-      "y": 7.0
+      "x": 0.8539869673657066,
+      "y": 4.391019014596169
     },
-    "rotation": 180.0
+    "rotation": -121.58129191893124
   },
   "command": {
     "type": "sequential",
@@ -14,13 +14,19 @@
         {
           "type": "named",
           "data": {
-            "name": "Run Flywheel"
+            "name": "Init"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 10.0
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "Example Path"
+            "pathName": "Right Shooting"
           }
         }
       ]

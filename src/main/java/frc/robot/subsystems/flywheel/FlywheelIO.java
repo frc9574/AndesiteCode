@@ -33,6 +33,13 @@ public interface FlywheelIO {
   /** Run closed loop at the specified velocity. */
   public default void setVelocity(double velocityRadPerSec, double ffVolts) {}
 
+  /** Run closed loop at the specified velocity. */
+  public default void setVelocity(
+      double topVelocityRadPerSec,
+      double topffVolts,
+      double bottomVelocityRadPerSec,
+      double bottomffVolts) {}
+
   /** Stop in open loop. */
   public default void stop() {}
 

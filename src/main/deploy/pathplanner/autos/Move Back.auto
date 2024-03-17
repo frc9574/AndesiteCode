@@ -2,10 +2,10 @@
   "version": 1.0,
   "startingPose": {
     "position": {
-      "x": 0.695314845175145,
-      "y": 4.328538111621678
+      "x": 1.4696007573833327,
+      "y": 5.503960098829289
     },
-    "rotation": 117.7904424794521
+    "rotation": 180.0
   },
   "command": {
     "type": "sequential",
@@ -20,7 +20,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Left Shooting"
+            "pathName": "Shooting Position"
           }
         },
         {

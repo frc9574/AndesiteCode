@@ -85,6 +85,7 @@ public class ModuleIOSparkMax implements ModuleIO {
     driveEncoder = driveSparkMax.getEncoder();
     turnRelativeEncoder = turnSparkMax.getEncoder();
 
+    driveSparkMax.setInverted(true);
     turnSparkMax.setInverted(isTurnMotorInverted);
     driveSparkMax.setSmartCurrentLimit(40);
     turnSparkMax.setSmartCurrentLimit(80);

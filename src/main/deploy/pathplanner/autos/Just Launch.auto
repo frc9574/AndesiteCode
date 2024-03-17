@@ -2,10 +2,10 @@
   "version": 1.0,
   "startingPose": {
     "position": {
-      "x": 0.695314845175145,
-      "y": 4.328538111621678
+      "x": 1.329669568430046,
+      "y": 5.569261320340823
     },
-    "rotation": 117.7904424794521
+    "rotation": 180.0
   },
   "command": {
     "type": "sequential",
@@ -18,21 +18,9 @@
           }
         },
         {
-          "type": "path",
-          "data": {
-            "pathName": "Left Shooting"
-          }
-        },
-        {
           "type": "named",
           "data": {
             "name": "Launch"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Leave"
           }
         }
       ]

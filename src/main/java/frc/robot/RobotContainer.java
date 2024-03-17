@@ -20,14 +20,15 @@ import edu.wpi.first.networktables.DoubleArrayEntry;
 import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandPS4Controller;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -56,9 +57,7 @@ import frc.robot.subsystems.outakeLift.OutakeLift;
 import frc.robot.subsystems.outakeLift.OutakeLiftIO;
 import frc.robot.subsystems.outakeLift.OutakeLiftIOSim;
 import frc.robot.subsystems.outakeLift.OutakeLiftIOSparkMax;
-
 import java.util.Optional;
-
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import org.littletonrobotics.junction.networktables.LoggedDashboardNumber;
@@ -89,9 +88,12 @@ public class RobotContainer {
   private final LoggedDashboardNumber flywheelSpeedInput =
       new LoggedDashboardNumber("Flywheel Speed", 1500.0);
   private final LoggedDashboardNumber outakeAngleFalloff =
-      new LoggedDashboardNumber("Outake angle falloff", 0.0025);
+      new LoggedDashboardNumber("Outake angle falloff", 0.00391);
   private final LoggedDashboardNumber minOutakeFalloffDist =
-      new LoggedDashboardNumber("Minimum outake distance for falloff", 1.50);
+      new LoggedDashboardNumber("Minimum outake distance for falloff", 2.1);
+  private final LoggedDashboardNumber ampSpeed = new LoggedDashboardNumber("Amp Speed", 2500);
+  private final LoggedDashboardNumber ampRatio = new LoggedDashboardNumber("Amp Ratio", -0.05);
+  private final LoggedDashboardNumber ampHeight = new LoggedDashboardNumber("Amp Height", 0.8);
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -151,6 +153,39 @@ public class RobotContainer {
         Commands.startEnd(
                 () -> flywheel.runVelocity(flywheelSpeedInput.get()), flywheel::stop, flywheel)
             .withTimeout(5.0));
+
+    NamedCommands.registerCommand(
+        "Init",
+        new SequentialCommandGroup(
+            Commands.runOnce(() -> outtakeLift.runPosition(0.4), flywheel, outtakeLift),
+            Commands.waitSeconds(0.5),
+            Commands.runOnce(() -> outtakeLift.runPosition(0), flywheel, outtakeLift, indexing),
+            Commands.waitSeconds(2)));
+    NamedCommands.registerCommand(
+        "Launch",
+        new SequentialCommandGroup(
+            Commands.runOnce(
+                () -> {
+                  flywheel.runVelocity(2500 * 2.5);
+                  outtakeLift.runPosition(
+                      -(this.getDistance() * 100 * outakeAngleFalloff.get())
+                          + minOutakeFalloffDist.get()
+                          - 0.2);
+                },
+                flywheel,
+                outtakeLift),
+            Commands.waitSeconds(2),
+            Commands.runOnce(() -> indexing.runVolts(12.0), indexing),
+            Commands.waitSeconds(2),
+            Commands.runOnce(
+                () -> {
+                  flywheel.stop();
+                  outtakeLift.runPosition(0);
+                  indexing.runVolts(0);
+                },
+                flywheel,
+                outtakeLift,
+                indexing)));
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
 
     // Set up SysId routines
@@ -189,17 +224,17 @@ public class RobotContainer {
    */
   private void configureButtonBindings() {
     // drive.setDefaultCommand(
-    //     DriveCommands.testDrive(
-    //         drive,
-    //         () -> driveController.getLeftY(),
-    //         () -> driveController.getLeftX(),
-    //         () -> driveController.getRightX()));
+    // DriveCommands.testDrive(
+    //     drive,
+    //     () -> driveController.getLeftY(),
+    //     () -> driveController.getLeftX(),
+    //     () -> driveController.getRightX()));
     drive.setDefaultCommand(
         DriveCommands.joystickDrive(
             drive,
             () -> -driveController.getLeftY(),
             () -> -driveController.getLeftX(),
-            () -> driveController.getRightX()));
+            () -> -driveController.getRightX()));
 
     // controller
     //     .b()
@@ -242,8 +277,7 @@ public class RobotContainer {
         .whileTrue(
             Commands.run(
                     () -> {
-                      flywheel.runVelocity((this.getDistance() * 100 * 0.828) + 1793);
-                      Logger.recordOutput("Vision/ObservedDistance", this.getDistance());
+                      flywheel.runVelocity(5000);
                     },
                     flywheel)
                 .finallyDo(flywheel::stop))
@@ -259,7 +293,8 @@ public class RobotContainer {
                 .finallyDo(() -> outtakeLift.runPosition(0.0)));
     controller
         .b()
-        .whileTrue(Commands.startEnd(() -> flywheel.runVelocity(-1000), flywheel::stop, flywheel))
+        .whileTrue(
+            Commands.startEnd(() -> flywheel.runVelocity(-1000 * 1.5), flywheel::stop, flywheel))
         .whileTrue(Commands.startEnd(intakeGuard::goOut, intakeGuard::goIn, intakeGuard))
         .whileTrue(
             Commands.startEnd(
@@ -267,6 +302,18 @@ public class RobotContainer {
                 () -> outtakeLift.runPosition(0.0),
                 outtakeLift))
         .whileTrue(Commands.startEnd(() -> indexing.runVolts(-12.0), indexing::stop, indexing));
+    controller
+        .y()
+        .whileTrue(
+            Commands.startEnd(
+                () -> flywheel.runVelocity(ampSpeed.get(), ampRatio.get()),
+                flywheel::stop,
+                flywheel))
+        .whileTrue(
+            Commands.startEnd(
+                () -> outtakeLift.runPosition(ampHeight.get()),
+                () -> outtakeLift.runPosition(0.0),
+                outtakeLift));
     controller
         .rightBumper()
         .whileTrue(Commands.startEnd(() -> indexing.runVolts(12.0), indexing::stop, indexing));
@@ -282,7 +329,8 @@ public class RobotContainer {
     tagEntry =
         NetworkTableInstance.getDefault()
             .getTable("Top_Right")
-            .getDoubleArrayTopic(DriverStation.getAlliance().equals(Optional.of(Alliance.Blue)) ? "tag_7" : "tag_4")
+            .getDoubleArrayTopic(
+                DriverStation.getAlliance().equals(Optional.of(Alliance.Blue)) ? "tag_7" : "tag_4")
             .getEntry(new double[] {0, 0});
   }
 

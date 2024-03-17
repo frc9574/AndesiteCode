@@ -226,6 +226,7 @@ public class Drive extends SubsystemBase {
     Rotation2d[] headings = new Rotation2d[4];
     for (int i = 0; i < 4; i++) {
       headings[i] = modules[i].turnRelativeOffset;
+      modules[i].dontOptimiseOnce = true;
     }
     kinematics.resetHeadings(headings);
     stop();

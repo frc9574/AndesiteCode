@@ -28,6 +28,8 @@ public class LiftIOSparkMax implements LiftIO {
     leader.enableVoltageCompensation(12.0);
     leader.setSmartCurrentLimit(80);
 
+    leader.setIdleMode(IdleMode.kBrake);
+
     configurePID(0.01, 0.0005, 0.0);
 
     leader.burnFlash();

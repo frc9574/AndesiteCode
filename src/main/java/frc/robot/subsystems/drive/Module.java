@@ -50,7 +50,7 @@ public class Module {
       case REAL:
       case REPLAY:
         driveFeedforward = new SimpleMotorFeedforward(0.1, 0.13);
-        driveFeedback = new PIDController(0.05, 0.0, 0.0);
+        driveFeedback = new PIDController(0.07, 0.0, 0.0);
         turnFeedback = new PIDController(3, 1, 0.0);
         break;
       case SIM:
@@ -125,10 +125,18 @@ public class Module {
   }
 
   /** Runs the module with the specified setpoint state. Returns the optimized state. */
+  public boolean dontOptimiseOnce = false;
+
   public SwerveModuleState runSetpoint(SwerveModuleState state) {
     // Optimize state based on current angle
     // Controllers run in "periodic" when the setpoint is not null
-    var optimizedState = SwerveModuleState.optimize(state, getAngle());
+    var optimizedState = state;
+    if (!dontOptimiseOnce) {
+      optimizedState = SwerveModuleState.optimize(state, getAngle());
+    } else {
+      optimizedState = state;
+      dontOptimiseOnce = false;
+    }
 
     // Update setpoints, controllers run in "periodic"
     angleSetpoint = optimizedState.angle;
