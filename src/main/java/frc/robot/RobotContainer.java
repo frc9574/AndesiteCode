@@ -284,9 +284,7 @@ public class RobotContainer {
         .whileTrue(
             Commands.run(
                     () -> {
-                      outtakeLift.runPosition(
-                          -(this.getDistance() * 100 * outakeAngleFalloff.get())
-                              + minOutakeFalloffDist.get());
+                      outtakeLift.runPosition(0.3);
                       Logger.recordOutput("Vision/ObservedDistance", this.getDistance());
                     },
                     outtakeLift)
